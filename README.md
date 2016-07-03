@@ -5,4 +5,4 @@
 
 ## Data Sampling
 * 加速度と角速度のデータは以下のシステムを組んで取得した. 取得データは「data」に, 取得するのに使ったマイコンのプログラムは「sampling program」に置く.
-![図](IMU_sampling_system.png)
+![図](IMU_sampling_system.png =480×480)
