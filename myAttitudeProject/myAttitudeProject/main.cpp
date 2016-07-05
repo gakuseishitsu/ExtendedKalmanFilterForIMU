@@ -4,30 +4,43 @@
 #include <fstream> // ifstream, ofstream
 #include <sstream> // istringstream
 
+#include "myUtility.h"
+
 const std::string fileName = "../../data/IMU_sample_100Hz.txt";
-const int NUM_OF_IMU_DATA = 7;
-const std::vector<double> coordinateModifyFactor{1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0};
+const int NUM_OF_IMU_DATA = 6;
+const double FIRST_TIME = 0.01;
+const double IMU_LPF = 0.5;
+const std::vector<double> coordinateModifyFactor{1.0, 1.0, 1.0, 1.0, 1.0, 1.0};
+const std::vector<double> BIAS{0.264562, -0.1776, -0.30055, -0.02727, 0.010064, 0.009732};
 
 template<typename T>
 class u {
 private:
+	T t;
 	std::vector<T> imuRawData;
+	std::vector<T> imuDataBias;
+	std::vector<T> imuDataLPF;
 public:
-	u();
+	u(const int num);
 	~u();
-	void setUData(const std::string& s);
-	T getImuRawData(int i) const { return imuRawData[i]; }
+
+	void setUData(const std::string& s, const std::vector<T>& f);
+	void setImuDataBias(const std::vector<T>& b);
+	void setLPF(const T ft, const T lpf);
+
+	T getT() const { return t; };
+	std::vector<T> getImuDataLPF() const { return imuDataLPF; };
+	std::string strImuDataLPF();
 };
 
-// util func
-std::vector<std::string> split(const std::string& input, char delimiter);
-template<class T> T convert_from_string(const std::string& str);
+template<typename T>
+std::ostream& operator<<(std::ostream& os, const u<T>& udata);
+
 
 int main(int argc, char** argv)
 {
-	u<double> input;
+	u<double> input(NUM_OF_IMU_DATA);
 
-	std::cout << "reading " << fileName << "..." << std::endl;
 	std::ifstream file;
 	try {
 		file.open(fileName, std::ios::in);
@@ -46,16 +59,16 @@ int main(int argc, char** argv)
 	while (std::getline(file, buf))
 	{
 		// string data -> vector
-		input.setUData(buf);
+		input.setUData(buf, coordinateModifyFactor);
+
+		// bias filter
+		input.setImuDataBias(BIAS);
 		
-		//std::cout << reading_line_buffer << std::endl;
-		std::cout << input.getImuRawData(0) << ","
-				  << input.getImuRawData(1) << ","
-				  << input.getImuRawData(2) << ","
-				  << input.getImuRawData(3) << ","
-				  << input.getImuRawData(4) << ","
-				  << input.getImuRawData(5) << ","
-				  << input.getImuRawData(6) << std::endl;
+		// LPF
+		input.setLPF(FIRST_TIME, IMU_LPF);
+		//input.coutData();
+
+		std::cout << input << std::endl;
 	}
 
 	return 0;
@@ -63,10 +76,13 @@ int main(int argc, char** argv)
 
 // constructor of u
 template<typename T>
-u<T>::u()
+u<T>::u(const int num)
 {
-	for (int i = 0; i < NUM_OF_IMU_DATA; ++i)
+	for (int i = 0; i < num; ++i) {
 		imuRawData.push_back(static_cast<T>(0));
+		imuDataBias.push_back(static_cast<T>(0));
+		imuDataLPF.push_back(static_cast<T>(0));
+	}
 }
 
 // destructor of u
@@ -74,32 +90,43 @@ template<typename T>
 u<T>::~u(){}
 
 template<typename T>
-void u<T>::setUData(const std::string& s) {
-	std::vector<std::string> vs = split(s, ',');
-	for (int i = 0; i < imuRawData.size(); i++)
-		imuRawData[i] = coordinateModifyFactor[i] * convert_from_string<T>(vs[i]);
+void u<T>::setUData(const std::string& s, const std::vector<T>& f) {
+	std::vector<std::string> vs = myUtility::split(s, ',');
+	t = myUtility::convert_from_string<T>(vs[0]);
+	for (int i = 0; i < static_cast<int>(imuRawData.size()); i++)
+		imuRawData[i] = f[i] * myUtility::convert_from_string<T>(vs[i+1]);
 }
 
-std::vector<std::string> split(const std::string& input, char delimiter)
-{
-	std::istringstream stream(input);
-
-	std::string field;
-	std::vector<std::string> result;
-	while (std::getline(stream, field, delimiter)) {
-		result.push_back(field);
-	}
-	return result;
+template<typename T>
+void u<T>::setImuDataBias(const std::vector<T>& b) {
+	for (int i = 0; i < static_cast<int>(imuRawData.size()); i++)
+		imuDataBias[i] = imuRawData[i] - b[i];
 }
 
-template<class T> 
-T convert_from_string(const std::string& str)
-{
-	std::istringstream stis1(str, std::ios_base::in);
-	T c1;
-	stis1 >> c1;
-	if (stis1.fail() || stis1.bad()) {
-		throw "error";
-	}
-	return c1;
+template<typename T>
+void u<T>::setLPF(const T ft, const T lpf) {
+	if (imuRawData[0] == ft)
+		imuDataLPF = imuDataBias;
+	else 
+		for (int i = 0; i < static_cast<int>(imuRawData.size()); i++)
+			imuDataLPF[i] = (lpf)*imuDataBias[i] + (1.0 - lpf) * imuDataLPF[i];
+}
+
+template<typename T>
+std::string u<T>::strImuDataLPF() {
+	std::string str;
+
+	return str;
+}
+
+template<typename T>
+std::ostream& operator<<(std::ostream& os, const u<T>& udata) {
+	os << udata.getT() << ","
+		<< udata.getImuDataLPF()[0] << ","
+		<< udata.getImuDataLPF()[1] << ","
+		<< udata.getImuDataLPF()[2] << ","
+		<< udata.getImuDataLPF()[3] << ","
+		<< udata.getImuDataLPF()[4] << ","
+		<< udata.getImuDataLPF()[5];
+	return os;
 }
