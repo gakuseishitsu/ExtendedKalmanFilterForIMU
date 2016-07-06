@@ -39,6 +39,16 @@
 
 <img src="images/Discretization_quaternion.png" width="700">
 
+## Equation of State
+* カルマンフィルタを適用させる状態方程式・観測方程式は以下のようになる. 観測方程式が非線形となっているため今回はEKFを使う.
+
+<img src="images/Equation_of_state.png" width="700">
+
+## Jacobian Matrix
+* EKFを回すために状態方程式・観測方程式それぞれのヤコビアン行列を求めた.
+
+<img src="images/Jacobian_matrix.png" width="700">
+
 ## 参考文献
 * [1] 座標系の取り方や方向余弦行列DCM, クオータニオンについて以下の資料を参考にした.  
 <a href="https://repository.exst.jaxa.jp/dspace/bitstream/a-is/23926/1/naltm00636.pdf">航空宇宙技術研究所資料 : クオータニオンとオイラー角によるキネマティックス表現の比較について</a>
