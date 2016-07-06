@@ -49,6 +49,12 @@
 
 <img src="images/Jacobian_matrix.png" width="700">
 
+## EKF Algorithm and Initial Values
+* EKFのアルゴリズムとその初期値を以下に示す.
+
+<img src="images/EKF.png" width="700">
+<img src="images/Initial_values.png" width="700">
+
 ## 参考文献
 * [1] 座標系の取り方や方向余弦行列DCM, クオータニオンについて以下の資料を参考にした.  
 <a href="https://repository.exst.jaxa.jp/dspace/bitstream/a-is/23926/1/naltm00636.pdf">航空宇宙技術研究所資料 : クオータニオンとオイラー角によるキネマティックス表現の比較について</a>
