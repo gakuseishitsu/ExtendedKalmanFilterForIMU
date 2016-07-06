@@ -6,4 +6,14 @@
 ## Data Sampling
 * 加速度と角速度のデータは以下のシステムを組んで取得した. 取得データは「data」に, 取得するのに使ったマイコンのプログラムは「sampling program」に置く.
 
-<img src="IMU_sampling_system.png" width="480×480">
+<img src="images/IMU_sampling_system.png" width="480×480">
+
+## Coordinate System
+* 座標系と方向余弦行列ついては以下のように設定する.
+
+<img src="images/Coordinate_system.png" width="700">
+<img src="images/DCM.png" width="700">
+
+## 参考文献
+* 座標系の取り方や方向余弦行列DCM, クオータニオンについて以下の資料を参考にした.
+<a href="https://repository.exst.jaxa.jp/dspace/bitstream/a-is/23926/1/naltm00636.pdf">航空宇宙技術研究所資料 : クオータニオンとオイラー角によるキネマティックス表現の比較について</a>

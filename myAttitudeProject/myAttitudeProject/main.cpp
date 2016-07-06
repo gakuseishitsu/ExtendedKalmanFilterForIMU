@@ -9,9 +9,9 @@
 const std::string fileName = "../../data/IMU_sample_100Hz.txt";
 const int NUM_OF_IMU_DATA = 6;
 const double FIRST_TIME = 0.01;
-const double IMU_LPF = 0.5;
+const double IMU_LPF = 0.07; // 出力をエクセルで眺めていい感じの値を選択
 const std::vector<double> coordinateModifyFactor{1.0, 1.0, 1.0, 1.0, 1.0, 1.0};
-const std::vector<double> BIAS{0.264562, -0.1776, -0.30055, -0.02727, 0.010064, 0.009732};
+const std::vector<double> BIAS{0.264562, -0.1776, -0.30055, -0.02727, 0.010064, 0.009732}; // 静止している0～5sの平均で算出
 
 template<typename T>
 class u {
@@ -30,7 +30,6 @@ public:
 
 	T getT() const { return t; };
 	std::vector<T> getImuDataLPF() const { return imuDataLPF; };
-	std::string strImuDataLPF();
 };
 
 template<typename T>
@@ -110,13 +109,6 @@ void u<T>::setLPF(const T ft, const T lpf) {
 	else 
 		for (int i = 0; i < static_cast<int>(imuRawData.size()); i++)
 			imuDataLPF[i] = (lpf)*imuDataBias[i] + (1.0 - lpf) * imuDataLPF[i];
-}
-
-template<typename T>
-std::string u<T>::strImuDataLPF() {
-	std::string str;
-
-	return str;
 }
 
 template<typename T>
