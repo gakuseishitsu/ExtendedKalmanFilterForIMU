@@ -18,7 +18,8 @@
 * DCMとオイラー角の関係, DCMとクオータニオンの関係は3-2-1系を用いる.
 
 <img src="images/Euler.png" width="700">
+<img src="images/Quaternion.png" width="700">
 
 ## 参考文献
-* 座標系の取り方や方向余弦行列DCM, クオータニオンについて以下の資料を参考にした.  
+* [1] 座標系の取り方や方向余弦行列DCM, クオータニオンについて以下の資料を参考にした.  
 <a href="https://repository.exst.jaxa.jp/dspace/bitstream/a-is/23926/1/naltm00636.pdf">航空宇宙技術研究所資料 : クオータニオンとオイラー角によるキネマティックス表現の比較について</a>
