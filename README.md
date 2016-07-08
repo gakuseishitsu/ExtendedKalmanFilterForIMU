@@ -9,7 +9,8 @@
 ## Version
 * 2016/07/06 21:00時点 : 立式して満足したところ(コードは書いていない)
 * 2016/07/07 18:00時点 : Eigenをダウンロードして使い方を勉強している.
-* 2016/07/08 12:00時点 : 一通り書いてみて, 案の状発散するから初期値をいじってみる.
+* 2016/07/08 12:00時点 : ひと通り書いてみて, 案の状発散するから初期値をいじってみる.
+* 2016/07/09 00:00時点 : クオータニオンの正規化したら発散はしなくなった. DCMやオイラー角取得関数を書いている.
 
 ## Index
 * [How to Sample Data](#how-to-sample-data)
@@ -21,6 +22,7 @@
 * [Equation of State](#equation-of-state)
 * [Jacobian Matrix](#jacobian-matrix)
 * [EKF Algorithm and Initial Values](#ekf-algorithm-and-initial-values)
+* [Eigen](#eigen)
 * [References](#references)
 
 ## How to Sample Data
@@ -71,6 +73,44 @@
 <img src="images/EKF.png" width="700">
 <img src="images/Initial_values.png" width="700">
 
+## Eigen
+* プログラム作成にあたって, Eigenという行列のライブラリを用いた. 忘れないように, 使い方をまとめておく.
+```cpp
+#include <iostreasm>
+#include <Eigen/core> // 基本機能を使うため
+#include <Eigen/LU> // 逆行列を使うため
+　
+int main{
+　
+	// Matrix<typename Scalar, int RowsAtCompileTime, int ColsAtCompileTime>
+	Eigen::Matrix<double, 3, 3> A; //定義
+	Eigen::Matrix<double, 3, 3> B;
+	Eigen::Matrix<double, 3, 3> C;
+	Eigen::Matrix<double, 3, 3> D;
+	Eigen::Matrix<double, 3, 3> E;
+　
+	A << 1.0, 0.0, 0.0, // 代入
+		0.0, 1.0, 0.0,
+		0.0, 0.0, 1.0;
+	B.setZero(); // 0で埋める
+　
+	C = A * B; // 掛け算
+	D = A.inverse(); // 逆行列
+	E = A.transpose(); // 転置
+　
+	std::cout << E << std::endl; // シフト演算子も定義されている.
+　
+	double val = A(0,0); // 要素へのアクセス
+	std::cout << val << std::endl; // 1.0
+　
+	return 0;
+}
+```
+
 ## References
 * 座標系の取り方や方向余弦行列DCM, クオータニオンについて以下の資料を参考にした.  
-<a href="https://repository.exst.jaxa.jp/dspace/bitstream/a-is/23926/1/naltm00636.pdf">[1]航空宇宙技術研究所資料 : クオータニオンとオイラー角によるキネマティックス表現の比較について</a>
+<a href="https://repository.exst.jaxa.jp/dspace/bitstream/a-is/23926/1/naltm00636.pdf">[1] 航空宇宙技術研究所資料 : クオータニオンとオイラー角によるキネマティックス表現の比較について</a>
+* 行列のライブラリEigen
+<a href="https://eigen.tuxfamily.org/dox/group__TutorialMatrixClass.html">[2] Eigen, The Matrix class</a>
+* Eigenの基本的な使い方が日本語でまとめられているページ
+<a href="http://blog.livedoor.jp/tek_nishi/archives/8623876.html">[3] でらうま倶楽部, Eigen - C++で使える線形代数ライブラリ</a>

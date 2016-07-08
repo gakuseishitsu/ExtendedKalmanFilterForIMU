@@ -1,3 +1,6 @@
+#ifndef MY_UTILITY_H
+#define MY_UTILITY_H
+
 #include <vector>
 #include <fstream> // ifstream, ofstream
 #include <sstream> // istringstream
@@ -31,3 +34,5 @@ T myUtility::convert_from_string(const std::string& str)
 	}
 	return c1;
 }
+
+#endif // MY_UTILITY_H
