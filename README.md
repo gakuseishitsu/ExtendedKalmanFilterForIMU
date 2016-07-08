@@ -80,7 +80,7 @@
 #include <Eigen/core> // 基本機能を使うため
 #include <Eigen/LU> // 逆行列を使うため
 　
-int main{
+int main(){
 　
 	// Matrix<typename Scalar, int RowsAtCompileTime, int ColsAtCompileTime>
 	Eigen::Matrix<double, 3, 3> A; //定義
@@ -110,7 +110,7 @@ int main{
 ## References
 * 座標系の取り方や方向余弦行列DCM, クオータニオンについて以下の資料を参考にした.  
 <a href="https://repository.exst.jaxa.jp/dspace/bitstream/a-is/23926/1/naltm00636.pdf">[1] 航空宇宙技術研究所資料 : クオータニオンとオイラー角によるキネマティックス表現の比較について</a>
-* 行列のライブラリEigen
+* 行列のライブラリEigen  
 <a href="https://eigen.tuxfamily.org/dox/group__TutorialMatrixClass.html">[2] Eigen, The Matrix class</a>
-* Eigenの基本的な使い方が日本語でまとめられているページ
+* Eigenの基本的な使い方が日本語でまとめられているページ  
 <a href="http://blog.livedoor.jp/tek_nishi/archives/8623876.html">[3] でらうま倶楽部, Eigen - C++で使える線形代数ライブラリ</a>
