@@ -15,14 +15,14 @@ const int NUM_OF_IMU_DATA = 6;
 const double FIRST_TIME = 0.01;
 const double DT = 0.01;
 const double GRAV_ACC = 9.80665;
-const double TO_DEG = 57.2958;
+const double TO_DEG = 57.2958; // rad -> deg
 const double IMU_LPF = 0.07; // o—Í‚ğƒGƒNƒZƒ‹‚Å’­‚ß‚Ä‚¢‚¢Š´‚¶‚Ì’l‚ğ‘I‘ğ
-const std::vector<double> coordinateModifyFactor{1.0, -1.0, 1.0, 1.0, -1.0, 1.0}; // MPU6050‚ÌŒ³‚ÌÀ•WŒn‚Æ©•ª‚Åİ’è‚µ‚½À•WŒn‚Æ‚Ì’²®
-const std::vector<double> BIAS{0.264562, 0.1776, -0.30055, -0.02727, -0.010064, 0.009732}; // Ã~‚µ‚Ä‚¢‚é0`5s‚Ì•½‹Ï‚ÅZo
+const std::vector<double> coordinateModifyFactor{1.0, -1.0, 1.0, -1.0, 1.0, -1.0}; // MPU6050‚ÌŒ³‚ÌÀ•WŒn‚Æ©•ª‚Åİ’è‚µ‚½À•WŒn‚Æ‚Ì’²®
+const std::vector<double> BIAS{0.264562, 0.1776, -0.30055, 0.02727, 0.010064, -0.009732}; // Ã~‚µ‚Ä‚¢‚é0`5s‚Ì•½‹Ï‚ÅZo
 
-const std::vector<double> INIT_P{ 0.001, 0.001, 0.001, 0.001 };
+const std::vector<double> INIT_P{ 0.0001, 0.0001, 0.0001, 0.0001 };
 const std::vector<double> INIT_Q{ 0.01, 0.01, 0.01, 0.01 };
-const std::vector<double> INIT_R{ 0.1, 0.1, 0.1 };
+const std::vector<double> INIT_R{ 1.0, 1.0, 10.0 };
 const std::vector<double> INIT_X { 0.0, 0.0, 0.0, 1.0 };
 const int SIZE_VECTOR_X = 4;
 const int SIZE_VECTOR_Y = 3;
@@ -128,20 +128,20 @@ int main(int argc, char** argv)
 		kalman.prediction(input.getImuDataLPF());
 		kalman.filter(input.getImuDataLPF());
 		kalman.normXHat();
-		std::cout << input.getT() << "," << kalman << std::endl;
-		out << input.getT() << "," << kalman << std::endl;
+		//std::cout << input.getT() << "," << kalman << std::endl;
+		//out << input.getT() << "," << kalman << std::endl;
 
 		// get DCM and Euler angles from quaternion
-		//Eigen::Matrix<double, 3, 3> DCM = getDCM(kalman.getXHat());
-		//Eigen::Matrix<double, 3, 1> E = getEuler(DCM);
-		//std::cout << input.getT() << "," << E(0,0)*TO_DEG << "," << E(1, 0)*TO_DEG << "," << E(2, 0)*TO_DEG << std::endl;
-		//out << input.getT() << "," << E(0, 0)*TO_DEG << "," << E(1, 0)*TO_DEG << "," << E(2, 0)*TO_DEG << std::endl;
+		Eigen::Matrix<double, 3, 3> DCM = getDCM(kalman.getXHat());
+		Eigen::Matrix<double, 3, 1> E = getEuler(DCM);
+		std::cout << input.getT() << "," << E(0,0)*TO_DEG << "," << E(1, 0)*TO_DEG << "," << E(2, 0)*TO_DEG << std::endl;
+		out << input.getT() << "," << E(0, 0)*TO_DEG << "," << E(1, 0)*TO_DEG << "," << E(2, 0)*TO_DEG << std::endl;
 
 		Eigen::Matrix<double, 3, 1> e = getEulerFromAccData(input.getImuDataLPF());
 		//std::cout << input.getT() << "," << e(0,0)*TO_DEG << "," << e(1, 0)*TO_DEG << "," << e(2, 0)*TO_DEG << std::endl;
 		//out << input.getT() << "," << e(0, 0)*TO_DEG << "," << e(1, 0)*TO_DEG << "," << e(2, 0)*TO_DEG << std::endl;
 
-		if (input.getT() == 5.0)
+		if (input.getT() == 30.0)
 			return 0;
 	}
 
@@ -162,7 +162,7 @@ myKalmanFilter<T>::myKalmanFilter(const std::vector<T>& x, const std::vector<T>&
 		 0.0, 0.0, p[2]  , 0.0,
 		 0.0, 0.0, 0.0  , p[3];
 
-	P << q[0]  , 0.0, 0.0, 0.0,
+	Q << q[0]  , 0.0, 0.0, 0.0,
 		 0.0, q[1]  , 0.0, 0.0,
 		 0.0, 0.0, q[2]  , 0.0,
 		 0.0, 0.0, 0.0, q[3]  ;
@@ -230,10 +230,7 @@ void myKalmanFilter<T>::filter(std::vector<T>& imu) {
 
 	C = CT.transpose();
 
-	Eigen::Matrix<T, 3, 3> TMP;
-	TMP = CT * PMinus * C + R;
-
-	g = PMinus * C * TMP.inverse();
+	g = PMinus * C * (CT * PMinus * C + R).inverse();
 
 	y << a[1],
 		 a[2],
@@ -244,19 +241,19 @@ void myKalmanFilter<T>::filter(std::vector<T>& imu) {
 		 (q[3] * q[3] - q[1] * q[1] - q[2] * q[2] + q[4] * q[4]) * GRAV_ACC;
 
 	xHat = xHatMinus + g * (y - h);
+	//xHat = xHatMinus;
 
-	P = { I - g * CT } *PMinus;
-
+	P = ( I - g * CT ) * PMinus;
 
 	//std::cout << "C" << std::endl << C << std::endl << std::endl;
 	//std::cout << "xHatMinus" << std::endl << xHatMinus << std::endl << std::endl;
 	//std::cout << "PMinus" << std::endl << PMinus << std::endl << std::endl;
-	//std::cout << "TMP" << std::endl << TMP << std::endl << std::endl;
 	//std::cout << "g" << std::endl << g << std::endl << std::endl;
 	//std::cout << "CT" << std::endl << CT << std::endl << std::endl;
-	//std::cout << "g*CT" << std::endl << g*CT << std::endl << std::endl;
+	//std::cout << "I - g*CT" << std::endl << I - g * CT << std::endl << std::endl;
 	//std::cout << "y" << std::endl << y << std::endl << std::endl;
 	//std::cout << "h" << std::endl << h << std::endl << std::endl;
+	//std::cout << "y-h" << std::endl << y - h << std::endl << std::endl;
 	//std::cout << "xHat" << std::endl << xHat << std::endl << std::endl;
 	//std::cout << "P" << std::endl << P << std::endl << std::endl;
 }
@@ -320,7 +317,10 @@ Eigen::Matrix<T, 3, 1> getEulerFromAccData(std::vector<T>& imu) {
 
 	pitch = asin(-1.0 * imu[0] / acc);
 	yaw = static_cast<T>(0);
-	roll = atan2(imu[1] / acc / cos(pitch), imu[2] / acc / cos(pitch));
+	if(imu[2] > 0.0)
+		roll = atan2(imu[1] / acc / cos(pitch), imu[2] / acc / cos(pitch));
+	else
+		roll = atan2(imu[1] / acc / cos(pitch), imu[2] / acc / cos(pitch));
 
 	euler << roll,
 		pitch,
