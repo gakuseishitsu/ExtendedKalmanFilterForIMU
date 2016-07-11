@@ -10,17 +10,19 @@
 #include "myUtility.h"
 
 const std::string fileName = "../../data/IMU_sample_100Hz.txt";
+const std::string logFile = "../../data/output.txt";
 const int NUM_OF_IMU_DATA = 6;
 const double FIRST_TIME = 0.01;
 const double DT = 0.01;
 const double GRAV_ACC = 9.80665;
+const double TO_DEG = 57.2958;
 const double IMU_LPF = 0.07; // èoóÕÇÉGÉNÉZÉãÇ≈í≠ÇﬂÇƒÇ¢Ç¢ä¥Ç∂ÇÃílÇëIë
-const std::vector<double> coordinateModifyFactor{1.0, -1.0, 1.0, 1.0, -1.0, 1.0};
+const std::vector<double> coordinateModifyFactor{1.0, -1.0, 1.0, 1.0, -1.0, 1.0}; // MPU6050ÇÃå≥ÇÃç¿ïWånÇ∆é©ï™Ç≈ê›íËÇµÇΩç¿ïWånÇ∆ÇÃí≤êÆ
 const std::vector<double> BIAS{0.264562, 0.1776, -0.30055, -0.02727, -0.010064, 0.009732}; // ê√é~ÇµÇƒÇ¢ÇÈ0Å`5sÇÃïΩãœÇ≈éZèo
 
-const double INIT_R = 0.1;
-const double INIT_Q = 0.1;
-const double INIT_P = 0.01;
+const std::vector<double> INIT_P{ 0.001, 0.001, 0.001, 0.001 };
+const std::vector<double> INIT_Q{ 0.01, 0.01, 0.01, 0.01 };
+const std::vector<double> INIT_R{ 0.1, 0.1, 0.1 };
 const std::vector<double> INIT_X { 0.0, 0.0, 0.0, 1.0 };
 const int SIZE_VECTOR_X = 4;
 const int SIZE_VECTOR_Y = 3;
@@ -34,7 +36,7 @@ private:
 	std::vector<T> imuDataLPF;
 public:
 	u(const int num);
-	~u();
+	~u() {};
 
 	void setUData(const std::string& s, const std::vector<T>& f);
 	void setImuDataBias(const std::vector<T>& b);
@@ -50,7 +52,6 @@ std::ostream& operator<<(std::ostream& os, const u<T>& udata);
 template<typename T>
 class myKalmanFilter {
 private:
-	// Eigen::Matrix<T, Rows(â°óÒÇ¢Ç≠Ç¬), Cols(ècóÒÇ¢Ç≠Ç¬)> matrix_name;
 	Eigen::Matrix<T, SIZE_VECTOR_X, 1> xHat;		// Estimated value of the state valiable
 	Eigen::Matrix<T, SIZE_VECTOR_X, 1> xHatMinus;	// Advance estimate of the state valiable
 	Eigen::Matrix<T, SIZE_VECTOR_Y, 1> y;			// Observation value
@@ -67,7 +68,7 @@ private:
 	Eigen::Matrix<T, SIZE_VECTOR_Y, SIZE_VECTOR_Y> R;			// Variance matrix of v
 	Eigen::Matrix<T, SIZE_VECTOR_X, SIZE_VECTOR_X> I;			// Unit Matrix
 public:
-	myKalmanFilter(const std::vector<T>& x, const T p, const T q, const T r);
+	myKalmanFilter(const std::vector<T>& x, const std::vector<T>& p, const std::vector<T>& q, const std::vector<T>& r);
 	~myKalmanFilter() {};
 
 	Eigen::Matrix<T, SIZE_VECTOR_X, 1> getXHat() const { return xHat; };
@@ -87,21 +88,24 @@ Eigen::Matrix<T, 3, 3> getDCM(Eigen::Matrix<T, SIZE_VECTOR_X, 1>& q);
 template<typename T>
 Eigen::Matrix<T, 3, 1> getEuler(Eigen::Matrix<T, 3, 3>& dcm);
 
+template<typename T>
+Eigen::Matrix<T, 3, 1> getEulerFromAccData(std::vector<T>& imu);
+
 int main(int argc, char** argv)
 {
 	u<double> input(NUM_OF_IMU_DATA);
 	myKalmanFilter<double> kalman(INIT_X, INIT_P, INIT_Q, INIT_R);
-
-	/*
-	std::cout << kalman.getXHat() << std::endl;
-	while (1) {}
-	*/
-
 	std::ifstream file;
+	std::ofstream out;
+
+	// open input and output files
 	try {
 		file.open(fileName, std::ios::in);
 		if (!file)
-			throw "[INFO] file not exit";
+			throw "[INFO] cannot open input file";
+		out.open(logFile, std::ios::out);
+		if (!out)
+			throw "[INFO] cannot open output file";
 	}
 	catch (char* str){
 		std::cout << str << std::endl;
@@ -118,19 +122,27 @@ int main(int argc, char** argv)
 		input.setUData(buf, coordinateModifyFactor);
 		input.setImuDataBias(BIAS);
 		input.setLPF(FIRST_TIME, IMU_LPF);
+		//std::cout << "LFPdata: " << input << std::endl << std::endl;
 
-		//std::cout << input << std::endl;
-
-		// kalman filter
+		// kalman filter and normalize quaternion
 		kalman.prediction(input.getImuDataLPF());
 		kalman.filter(input.getImuDataLPF());
-
 		kalman.normXHat();
-
-		Eigen::Matrix<double, 3, 3> DCM = getDCM(kalman.getXHat());
-		//Eigen::Matrix<double, 3, 1> Euler = getEuler(DCM);
-
 		std::cout << input.getT() << "," << kalman << std::endl;
+		out << input.getT() << "," << kalman << std::endl;
+
+		// get DCM and Euler angles from quaternion
+		//Eigen::Matrix<double, 3, 3> DCM = getDCM(kalman.getXHat());
+		//Eigen::Matrix<double, 3, 1> E = getEuler(DCM);
+		//std::cout << input.getT() << "," << E(0,0)*TO_DEG << "," << E(1, 0)*TO_DEG << "," << E(2, 0)*TO_DEG << std::endl;
+		//out << input.getT() << "," << E(0, 0)*TO_DEG << "," << E(1, 0)*TO_DEG << "," << E(2, 0)*TO_DEG << std::endl;
+
+		Eigen::Matrix<double, 3, 1> e = getEulerFromAccData(input.getImuDataLPF());
+		//std::cout << input.getT() << "," << e(0,0)*TO_DEG << "," << e(1, 0)*TO_DEG << "," << e(2, 0)*TO_DEG << std::endl;
+		//out << input.getT() << "," << e(0, 0)*TO_DEG << "," << e(1, 0)*TO_DEG << "," << e(2, 0)*TO_DEG << std::endl;
+
+		if (input.getT() == 5.0)
+			return 0;
 	}
 
 	return 0;
@@ -138,26 +150,26 @@ int main(int argc, char** argv)
 
 // constructor of myKalmanFilter
 template<typename T>
-myKalmanFilter<T>::myKalmanFilter(const std::vector<T>& x, const T p, const T q, const T r) 
+myKalmanFilter<T>::myKalmanFilter(const std::vector<T>& x, const std::vector<T>& p, const std::vector<T>& q, const std::vector<T>& r)
 {
 	xHat << x[0], 
 		    x[1], 
 		    x[2], 
 		    x[3];
 
-	P << p  , 0.0, 0.0, 0.0,
-		 0.0, p  , 0.0, 0.0,
-		 0.0, 0.0, p  , 0.0,
-		 0.0, 0.0, 0.0  , p;
+	P << p[0]  , 0.0, 0.0, 0.0,
+		 0.0, p[1]  , 0.0, 0.0,
+		 0.0, 0.0, p[2]  , 0.0,
+		 0.0, 0.0, 0.0  , p[3];
 
-	P << q  , 0.0, 0.0, 0.0,
-		 0.0, q  , 0.0, 0.0,
-		 0.0, 0.0, q  , 0.0,
-		 0.0, 0.0, 0.0, q  ;
+	P << q[0]  , 0.0, 0.0, 0.0,
+		 0.0, q[1]  , 0.0, 0.0,
+		 0.0, 0.0, q[2]  , 0.0,
+		 0.0, 0.0, 0.0, q[3]  ;
 
-	R << r  , 0.0, 0.0,
-		 0.0, r  , 0.0,
-		 0.0, 0.0, r  ;
+	R << r[0]  , 0.0, 0.0,
+		 0.0, r[1]  , 0.0,
+		 0.0, 0.0, r[2]  ;
 
 	I << 1.0, 0.0, 0.0, 0.0,
 		 0.0, 1.0, 0.0, 0.0,
@@ -229,25 +241,41 @@ void myKalmanFilter<T>::filter(std::vector<T>& imu) {
 
 	h << 2 * (q[3] * q[1] - q[2] * q[4]) * GRAV_ACC,
 		 2 * (q[2] * q[3] - q[1] * q[4]) * GRAV_ACC,
-		 2 * (q[3] * q[3] - q[1] * q[1] - q[2] * q[2] + q[4] * q[4]) * GRAV_ACC;
+		 (q[3] * q[3] - q[1] * q[1] - q[2] * q[2] + q[4] * q[4]) * GRAV_ACC;
 
 	xHat = xHatMinus + g * (y - h);
 
 	P = { I - g * CT } *PMinus;
+
+
+	//std::cout << "C" << std::endl << C << std::endl << std::endl;
+	//std::cout << "xHatMinus" << std::endl << xHatMinus << std::endl << std::endl;
+	//std::cout << "PMinus" << std::endl << PMinus << std::endl << std::endl;
+	//std::cout << "TMP" << std::endl << TMP << std::endl << std::endl;
+	//std::cout << "g" << std::endl << g << std::endl << std::endl;
+	//std::cout << "CT" << std::endl << CT << std::endl << std::endl;
+	//std::cout << "g*CT" << std::endl << g*CT << std::endl << std::endl;
+	//std::cout << "y" << std::endl << y << std::endl << std::endl;
+	//std::cout << "h" << std::endl << h << std::endl << std::endl;
+	//std::cout << "xHat" << std::endl << xHat << std::endl << std::endl;
+	//std::cout << "P" << std::endl << P << std::endl << std::endl;
 }
 
 
 template<typename T>
 void myKalmanFilter<T>::normXHat() {
-	xHat.normalize();
+	T norm;
+	norm = sqrt(xHat(0, 0)*xHat(0, 0) + xHat(1, 0)*xHat(1, 0) + xHat(2, 0)*xHat(2, 0) + xHat(3, 0)*xHat(3, 0));
+	xHat /= norm;
 }
 
 template<typename T>
 std::ostream& operator<<(std::ostream& os, const myKalmanFilter<T>& k) {
-	os << k.getXHat()[0] << ","
-		<< k.getXHat()[1] << ","
-		<< k.getXHat()[2] << ","
-		<< k.getXHat()[3];
+	Eigen::Matrix<T, 4, 1> x = k.getXHat();
+	os << x(0, 0) << ","
+		<< x(1, 0) << ","
+		<< x(2, 0) << ","
+		<< x(3, 0);
 	return os;
 }
 
@@ -256,8 +284,8 @@ Eigen::Matrix<T, 3, 3> getDCM(Eigen::Matrix<T, SIZE_VECTOR_X, 1>& x) {
 	Eigen::Matrix<T, 3, 3> dcm;
 	std::vector<T> q;
 	q.push_back(static_cast<T>(0));
-	for (int i = 1; i < 5; ++i)
-		q.push_back(x(i,1)); // q[1]~q[4]
+	for (int i = 0; i < 4; ++i)
+		q.push_back(x(i,0)); // q[1]~q[4]
 
 	dcm << q[1] * q[1] - q[2] * q[2] - q[3] * q[3] + q[4] * q[4], 2 * (q[1] * q[2] + q[3] * q[4]), 2 * (q[3] * q[1] - q[2] * q[4]),
 		2 * (q[1] * q[2] - q[3] * q[4]), q[2] * q[2] - q[3] * q[3] - q[1] * q[1] + q[4] * q[4], 2 * (q[2] * q[3] + q[1] * q[4]),
@@ -271,9 +299,28 @@ Eigen::Matrix<T, 3, 1> getEuler(Eigen::Matrix<T, 3, 3>& dcm) {
 	Eigen::Matrix<T, 3, 1> euler;
 	T pitch, yaw, roll;
 
-	pitch = asin(-1.0 * dcm(1, 3));
-	yaw = atan2(dcm(1, 2) / cos(pitch), dcm(1, 1) / cos(pitch));
-	roll = atan2(dcm(2, 3) / cos(pitch), dcm(3, 3) / cos(pitch));
+	pitch = asin(-1.0 * dcm(0, 2));
+	yaw = atan2(dcm(0, 1) / cos(pitch), dcm(0, 0) / cos(pitch));
+	roll = atan2(dcm(1, 2) / cos(pitch), dcm(2, 2) / cos(pitch));
+
+	euler << roll,
+		pitch,
+		yaw;
+
+	return euler;
+}
+
+template<typename T>
+Eigen::Matrix<T, 3, 1> getEulerFromAccData(std::vector<T>& imu) {
+	Eigen::Matrix<T, 3, 1> euler;
+
+	T roll, pitch, yaw, acc;
+
+	acc = sqrt(imu[0] * imu[0] + imu[1] * imu[1] + imu[2] * imu[2]);
+
+	pitch = asin(-1.0 * imu[0] / acc);
+	yaw = static_cast<T>(0);
+	roll = atan2(imu[1] / acc / cos(pitch), imu[2] / acc / cos(pitch));
 
 	euler << roll,
 		pitch,
@@ -293,10 +340,6 @@ u<T>::u(const int num)
 	}
 }
 
-// destructor of u
-template<typename T>
-u<T>::~u(){}
-
 template<typename T>
 void u<T>::setUData(const std::string& s, const std::vector<T>& f) {
 	std::vector<std::string> vs = myUtility::split(s, ',');
@@ -313,7 +356,7 @@ void u<T>::setImuDataBias(const std::vector<T>& b) {
 
 template<typename T>
 void u<T>::setLPF(const T ft, const T lpf) {
-	if (imuRawData[0] == ft)
+	if (t == ft)
 		imuDataLPF = imuDataBias;
 	else 
 		for (int i = 0; i < static_cast<int>(imuRawData.size()); i++)
